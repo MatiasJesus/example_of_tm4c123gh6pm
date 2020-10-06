@@ -1,0 +1,77 @@
+#include <stdint.h>
+#include "tm4c123gh6pm.h"
+
+#define ledRojo 0x02
+#define ledAzul 0x04
+#define ledVerde 0x08
+#define leds 0x0E
+
+/******* Configuracion del Puerto F **********/
+void configPuertoF ( void ) {
+	// Se habilita la seÃ±al de reloj del Puerto F
+	SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R5 ;
+	// Espera a que se active
+	while ( ( SYSCTL_PRGPIO_R & SYSCTL_PRGPIO_R5 )== 0 ) {}
+	GPIO_PORTF_LOCK_R = 0x4C4F434B ; // Se desbloquea el Puerto F
+	GPIO_PORTF_CR_R |= 0x01 ; // Se habilita el PF0
+	GPIO_PORTF_DIR_R &= ~ 0x11 ; // PF0 y PF4 como entradas
+	GPIO_PORTF_PUR_R |= 0x11 ; // Resistencias pull-up de PF0 y PF4
+	GPIO_PORTF_DIR_R |= 0x0E ; // PF1, PF2 y PF3 como salidas
+	GPIO_PORTF_AFSEL_R &= ~ 0x1F ; // Se desactivan las funciones alternas
+	GPIO_PORTF_DEN_R |= 0x1F ;
+}
+int main ( void ) {
+	uint8_t a ; // Variable para contar parpadeos
+	uint32_t i, color ; // Variable para retardos
+	configPuertoF (); // Se configuran los pulsadores y leds a utilizar
+	GPIO_PORTF_DATA_R &= ~0x0E ; // Se apagan los leds inicialmente
+	color = 0x00;
+	while (1){
+	while ( color < 0x0E){
+		if (( GPIO_PORTF_DATA_R & 0x11 ) == 0x01 ){ // ¿Se presiono el SW1(PF4)?
+			// Se espera a que se suelte el SW1
+			while (( GPIO_PORTF_DATA_R & 0x11 ) == 0x01 );
+			
+			// Parpadeo del led variara segun la suma
+			GPIO_PORTF_DATA_R |= color + 0x02 ;
+			color = color + 0x02 ;
+			for ( i = 0 ; i < 800000 ; i ++);
+			GPIO_PORTF_DATA_R &= ~ leds ;
+			for ( i = 0 ; i < 800000 ; i ++);
+			
+		} else if (( GPIO_PORTF_DATA_R & 0x11 ) == 0x10 ){ //¿se presiono SW2 (PF0)?
+			// Se espera que se suelte el SW2
+			while (( GPIO_PORTF_DATA_R & 0x11 ) == 0x10 ){};
+			// Parpadeos del complemento del color
+				color =  color ^ 0x0F ;
+				GPIO_PORTF_DATA_R |= color ;
+				for ( i = 0 ; i < 800000 ; i ++);
+				GPIO_PORTF_DATA_R &= ~ leds ;
+				for ( i = 0 ; i < 800000 ; i ++);
+		}
+	} // Fin del while
+	while ( color > 0x00){
+		if (( GPIO_PORTF_DATA_R & 0x11 ) == 0x01 ){ // ¿Se presiono el SW1(PF4)?
+			// Se espera a que se suelte el SW1
+			while (( GPIO_PORTF_DATA_R & 0x11 ) == 0x01 );
+			
+			// Parpadeo del led variara segun la suma
+			GPIO_PORTF_DATA_R |= color - 0x02 ;
+			color = color - 0x02 ;
+			for ( i = 0 ; i < 800000 ; i ++);
+			GPIO_PORTF_DATA_R &= ~ leds ;
+			for ( i = 0 ; i < 800000 ; i ++);
+			
+		} else if (( GPIO_PORTF_DATA_R & 0x11 ) == 0x10 ){ //¿se presiono SW2 (PF0)?
+			// Se espera que se suelte el SW2
+			while (( GPIO_PORTF_DATA_R & 0x11 ) == 0x10 ){};
+			// Parpadeos del complemento del color
+				color =  color ^ 0x0F ;
+				GPIO_PORTF_DATA_R |= color ;
+				for ( i = 0 ; i < 800000 ; i ++);
+				GPIO_PORTF_DATA_R &= ~ leds ;
+				for ( i = 0 ; i < 800000 ; i ++);
+		}
+	}
+	} // Fin del while
+} // Fin del main	
